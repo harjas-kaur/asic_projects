@@ -1,5 +1,10 @@
 # AXI-Lite to APB Bridge ASIC Implementation and Pipeline Optimization
 
+| Baseline                                         | Pipelined                                          |
+| ------------------------------------------------ | -------------------------------------------------- |
+| ![GDS](images/baseline_gds.png) | ![GDS](images/pipelined_gds.png) |
+
+---
 ## Overview
 
 This project explores the complete RTL-to-GDSII ASIC implementation flow for an AXI-Lite to APB bridge using the OpenLane/OpenROAD toolchain and the Sky130 PDK.
