@@ -145,17 +145,39 @@ The synthesized bridge occupied a compact silicon footprint suitable for lightwe
 
 ---
 
-# Future Work
+---
 
-Planned extensions to this project include:
+# Performance Characterization
 
-* Floorplan utilization sweep experiments
-* Congestion hotspot analysis
-* Pipelined bridge implementation
-* QoR comparison between pipelined and non-pipelined architectures
-* Clock optimization experiments
-* Power and IR-drop analysis
+To evaluate the timing performance of the baseline architecture, the design was synthesized and implemented under progressively tighter clock constraints using OpenLane/OpenROAD.
 
+## Clock Constraint Analysis
+
+The baseline implementation was tested at a target clock period of:
+
+- Clock Period: 5 ns
+- Target Frequency: 200 MHz
+
+The resulting timing metrics were:
+
+| Metric | Value |
+|---|---|
+| Worst Negative Slack (WNS) | -0.538 ns |
+| Total Negative Slack (TNS) | -6.516 ns |
+
+The negative setup slack indicates that the baseline architecture failed timing closure at 200 MHz.
+
+---
+
+## Estimated Maximum Frequency
+
+The critical path delay can be approximated as:
+
+```text
+Critical Path Delay ≈ Clock Period + |WNS|
+                    ≈ 5 ns + 0.538 ns
+                    ≈ 5.538 ns
+        Fmax ≈ 1 / 5.538 ns ≈ 180 MHz
 ---
 
 # Repository Structure
