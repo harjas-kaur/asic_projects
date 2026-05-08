@@ -1,241 +1,323 @@
-# AXI-Lite to APB Bridge ASIC Implementation and Pipeline Optimization
+# AXI-Lite to APB Bridge RTL-to-GDSII ASIC Implementation, Pipeline Optimization and Assertion-Based Verification
 
-| Baseline                                         | Pipelined                                          |
-| ------------------------------------------------ | -------------------------------------------------- |
-| ![GDS](images/baseline_gds.png) | ![GDS](images/pipelined_gds.png) |
-
----
-## Overview
-
-This project explores the complete RTL-to-GDSII ASIC implementation flow for an AXI-Lite to APB bridge using the OpenLane/OpenROAD toolchain and the Sky130 PDK.
-
-Two architectures were implemented and analyzed:
-
-1. Baseline AXI-Lite to APB Bridge
-2. Pipelined AXI-Lite to APB Bridge
-
-The objective of this work was to:
-
-* Implement a complete open-source ASIC backend flow
-* Perform synthesis, floorplanning, placement, CTS, routing, STA, and signoff verification
-* Analyze backend QoR metrics under aggressive timing constraints
-* Evaluate the impact of pipelining on timing closure and maximum operating frequency
-* Compare physical design characteristics between baseline and optimized architectures
+| Baseline | Pipelined |
+|----------|-----------|
+| ![Baseline GDS](images/baseline_gds.png) | ![Pipelined GDS](images/pipelined_gds.png) |
 
 ---
 
-# Design Details
+## Project Overview
 
-## Top Module
+This project implements an AXI-Lite to APB bridge and takes it through a complete RTL-to-GDSII ASIC implementation flow using the OpenLane/OpenROAD toolchain and the Sky130 PDK.
 
-`bridge.v`
+The work consists of two implementations:
 
-## Supported Protocols
+- Baseline AXI-Lite to APB bridge
+- Pipelined AXI-Lite to APB bridge
 
-* AXI-Lite
-* APB
+The pipelined architecture was developed to study how small RTL microarchitectural changes affect timing closure and physical implementation metrics after synthesis and place-and-route.
 
-## Design Features
-
-* FSM-based transaction control
-* Read/Write transaction handling
-* Burst transaction support
-* Synthesizable RTL implementation
-* Timing-aware pipelined architecture
+In addition to backend implementation, a lightweight SystemVerilog Assertion (SVA) based verification environment was developed to validate protocol sequencing and handshake behaviour of the bridge.
 
 ---
 
-# Toolchain
+# Project Objectives
 
-| Tool       | Purpose                              |
-| ---------- | ------------------------------------ |
-| OpenLane   | Automated RTL-to-GDSII flow          |
-| OpenROAD   | Physical design and STA              |
-| Yosys      | RTL synthesis                        |
-| Verilator  | RTL linting                          |
-| Magic      | DRC and layout visualization         |
-| KLayout    | GDSII visualization                  |
-| Sky130 PDK | Open-source 130nm technology library |
+- Implement an AXI-Lite to APB bridge in an ASIC design flow
+- Complete RTL-to-GDSII implementation using OpenLane
+- Compare backend QoR between baseline and pipelined RTL
+- Improve timing by reducing critical combinational path depth
+- Validate protocol behaviour using SystemVerilog Assertions
 
 ---
 
-# RTL-to-GDSII Flow
+# Bridge Architecture
 
-Both implementations successfully completed:
+## Original Architecture
 
-* RTL Linting
-* Logic Synthesis
-* Floorplanning
-* Global Placement
-* Detailed Placement
-* Clock Tree Synthesis (CTS)
-* Global Routing
-* Detailed Routing
-* Static Timing Analysis (STA)
-* Design Rule Checking (DRC)
-* GDSII Generation
+The original bridge uses a finite state machine (FSM) to translate AXI-Lite read and write transactions into APB transactions.
 
----
+The controller directly processes incoming AXI requests and generates APB control signals, address decoding and transaction sequencing in the same datapath.
 
-# Architectural Optimization
-
-## Baseline Architecture
-
-The original bridge implementation used direct AXI-to-APB combinational transaction handling with FSM-based protocol control.
-
-Under aggressive timing constraints, the baseline design exhibited significant setup timing violations caused by long combinational critical paths.
+This implementation is functionally correct but places a relatively large amount of combinational logic between registers, creating longer critical timing paths.
 
 ---
 
 ## Pipelined Architecture
 
-The optimized architecture introduced a dedicated AXI-side pipeline stage.
+To improve timing closure, a pipeline stage was inserted at the AXI input interface.
 
-Pipeline registers were inserted for:
+Registers were added for:
 
-* AXI address signals
-* Valid control signals
-* Burst control signals
-* Write datapath signals
+- Read address
+- Write address
+- Read valid
+- Write valid
+- Burst type
+- Burst length
+- Write data
 
-This reduced combinational logic depth and improved timing scalability.
+Instead of driving the FSM directly from AXI inputs, the FSM operates on registered pipeline signals.
+
+The objective was to shorten the longest combinational paths while preserving the functional behaviour of the bridge.
+
+---
+
+# Design Features
+
+- AXI-Lite master interface
+- APB slave interface
+- FSM-based protocol controller
+- Read transaction support
+- Write transaction support
+- Burst transaction handling
+- Parameterized state machine
+- Synthesizable Verilog RTL
+- Pipelined architecture for timing optimization
+
+---
+
+# Toolchain
+
+| Tool | Purpose |
+|------|---------|
+| OpenLane | RTL-to-GDSII flow |
+| OpenROAD | Physical implementation and STA |
+| Yosys | Logic synthesis |
+| Verilator | RTL linting |
+| Icarus Verilog | RTL simulation |
+| GTKWave | Waveform analysis |
+| EDA Playground | SystemVerilog assertion verification |
+| Magic | DRC and layout visualization |
+| KLayout | GDS visualization |
+| Sky130 | 130 nm open-source process |
+
+---
+
+# RTL-to-GDSII Flow
+
+Both architectures were taken through the complete OpenLane implementation flow.
+
+The completed stages include:
+
+- RTL linting
+- Logic synthesis
+- Floorplanning
+- Tapcell insertion
+- Power distribution network generation
+- Global placement
+- Detailed placement
+- Clock Tree Synthesis (CTS)
+- Global routing
+- Detailed routing
+- Static Timing Analysis
+- Design Rule Checking (DRC)
+- GDSII generation
+
+---
+
+# SystemVerilog Assertion Verification
+
+A lightweight assertion-based verification environment was developed using SystemVerilog Assertions (SVA).
+
+Assertions were written separately from the RTL to verify protocol behaviour during simulation.
+
+The implemented assertions check:
+
+- AXI read address handshake
+- AXI write address handshake
+- AXI write data handshake
+- APB reset behaviour
+- APB protocol sequencing
+
+The assertion source is located in:
+
+```
+AXI-to-APB-Bridge/
+    bridge_assertions.sv
+```
+
+The assertion module can be compiled together with the pipelined RTL located in the OpenLane implementation directory.
+
+Simulation was performed on EDA Playground.
+
+During development, temporary protocol violations were intentionally introduced in the testbench to verify that the assertions correctly detected illegal protocol behaviour before restoring the original implementation.
 
 ---
 
 # QoR Comparison
 
-## Timing Comparison @ 5 ns Clock Constraint (200 MHz)
+## Timing Comparison (5 ns Clock Constraint)
 
-| Metric         | Baseline  | Pipelined |
-| -------------- | --------- | --------- |
-| WNS            | -0.538 ns | -0.155 ns |
-| TNS            | -6.516 ns | -0.707 ns |
-| Estimated Fmax | ~180 MHz  | ~194 MHz  |
+| Metric | Baseline | Pipelined |
+|---------|----------|-----------|
+| Worst Negative Slack (WNS) | -0.538 ns | -0.155 ns |
+| Total Negative Slack (TNS) | -6.516 ns | -0.707 ns |
+| Estimated Maximum Frequency | ~180 MHz | ~194 MHz |
 
 ---
 
 ## Physical Design Comparison
 
-| Metric                    | Baseline  | Pipelined |
-| ------------------------- | --------- | --------- |
-| Synthesized Area          | ~8765 µm² | ~2444 µm² |
-| Post-DFF Area             | ~4973 µm² | ~1051 µm² |
-| Final Cell Count          | ~721      | ~215      |
-| DRC Status                | Passed ✅  | Passed ✅  |
-| Standard Cell Utilization | ~41.8%    | ~41.8%    |
+| Metric | Baseline | Pipelined |
+|---------|----------|-----------|
+| Synthesized Area | ~8765 µm² | ~2444 µm² |
+| Post-Optimization Area | ~4973 µm² | ~1051 µm² |
+| Final Standard Cell Count | ~721 | ~215 |
+| Standard Cell Utilization | ~41.8% | ~41.8% |
+| DRC | Passed | Passed |
 
 ---
 
-# Key Observations
+# Metric Definitions
 
-## Timing Improvement
+### Worst Negative Slack (WNS)
 
-Pipeline insertion significantly reduced setup timing violations:
+The largest setup timing violation in the design.
 
-```text
-WNS Improvement:
--0.538 ns → -0.155 ns
+A value closer to **0 ns** indicates better timing closure.
+
+---
+
+### Total Negative Slack (TNS)
+
+The sum of all negative timing slack across the design.
+
+Lower magnitude indicates fewer overall timing violations.
+
+---
+
+### Estimated Maximum Frequency
+
+Approximate maximum clock frequency inferred from static timing analysis after implementation.
+
+---
+
+### Synthesized Area
+
+Total standard-cell area reported after logic synthesis.
+
+---
+
+### Post-Optimization Area
+
+Area after placement and optimization during physical implementation.
+
+---
+
+### Standard Cell Utilization
+
+Percentage of available core area occupied by standard cells.
+
+---
+
+### DRC
+
+Design Rule Check verifies that the final layout satisfies manufacturing rules required by the Sky130 technology.
+
+---
+
+# Results
+
+The pipelined implementation reduced the worst timing violation from
+
+```
+-0.538 ns
 ```
 
-This demonstrates the effectiveness of pipelining in shortening critical combinational paths.
+to
 
----
-
-## Frequency Scaling
-
-The pipelined implementation improved estimated maximum operating frequency:
-
-```text
-Baseline   : ~180 MHz
-Pipelined  : ~194 MHz
+```
+-0.155 ns
 ```
 
-This improvement was achieved while maintaining successful routing convergence and DRC-clean layout generation.
+while increasing the estimated operating frequency from approximately
+
+```
+180 MHz
+```
+
+to
+
+```
+194 MHz.
+```
+
+The complete OpenLane flow successfully generated DRC-clean GDSII layouts for both implementations.
 
 ---
 
-## Backend QoR Behavior
+# Layout Comparison
 
-The project demonstrated how microarchitectural RTL changes directly impact:
+## GDSII
 
-* Timing closure behavior
-* Critical path delay
-* Physical design convergence
-* Routing complexity
-* Area utilization
-* Placement behavior
+| Baseline | Pipelined |
+|----------|-----------|
+| ![Baseline](images/baseline_gds.png) | ![Pipelined](images/pipelined_gds.png) |
 
 ---
 
-# GDSII Comparison
+## Floorplan
 
-## Baseline GDSII Layout
-
-![Baseline GDS](images/baseline_gds.png)
-
----
-
-## Pipelined GDSII Layout
-
-![Pipelined GDS](images/pipelined_gds.png)
+| Baseline | Pipelined |
+|----------|-----------|
+| ![Baseline](images/baseline_floorplan.png) | ![Pipelined](images/pipelined_floorplan.png) |
 
 ---
 
-# Floorplan Comparison
+## Routed Layout
 
-| Baseline                                             | Pipelined                                              |
-| ---------------------------------------------------- | ------------------------------------------------------ |
-| ![Baseline Floorplan](images/baseline_floorplan.png) | ![Pipelined Floorplan](images/pipelined_floorplan.png) |
-
----
-
-# Routed Layout Comparison
-
-| Baseline                                         | Pipelined                                          |
-| ------------------------------------------------ | -------------------------------------------------- |
-| ![Baseline Routing](images/baseline_routing.png) | ![Pipelined Routing](images/pipelined_routing.png) |
+| Baseline | Pipelined |
+|----------|-----------|
+| ![Baseline](images/baseline_routing.png) | ![Pipelined](images/pipelined_routing.png) |
 
 ---
 
 # Repository Structure
 
-```text
-asic_projects/
+```
+.
+├── AXI-to-APB-Bridge/
+│   ├── bridge_assertions.sv
+│   ├── bridge.v
+│   ├── axi_slave.v
+│   ├── apb.v
+│   └── testbenches/
 │
-├── axi_apb_openlane/                 # Baseline implementation
-├── axi_apb_pipelined_openlane/       # Pipelined implementation
-├── images/                           # Shared screenshots
+├── axi_apb_openlane/
+│
+├── axi_apb_pipelined_openlane/
+│
+├── images/
+│
 └── README.md
 ```
 
 ---
 
-# Key Learning Outcomes
+# Acknowledgements
 
-This project provided hands-on experience with:
+The baseline AXI-Lite to APB bridge RTL was developed using the SURE Trust AXI-to-APB Bridge project as a reference.
 
-* ASIC backend implementation flow
-* Timing-driven RTL optimization
-* Pipeline-aware microarchitecture refinement
-* Physical design QoR analysis
-* Timing closure methodology
-* Open-source silicon implementation tools
+The RTL was subsequently modified and extended with:
 
----
+- RTL pipeline optimization
+- OpenLane/OpenROAD RTL-to-GDSII implementation
+- QoR comparison between baseline and pipelined architectures
+- SystemVerilog assertion-based verification
+- Timing analysis and documentation
 
-# References
+Original reference:
 
-* OpenLane
-* OpenROAD
-* SkyWater Sky130 PDK
-* Yosys Open Synthesis Suite
-* Magic VLSI
-* KLayout
+https://github.com/sure-trust/VLSI-Project-AXI-to-APB-Bridge
 
 ---
 
-## Author
+# Author
 
-Harjas Kaur
+**Harjas Kaur**
 
-ASIC RTL-to-GDSII Physical Design and Timing Optimization Project
+B.Tech Electrical and Electronics Engineering  
+Indian Institute of Technology Ropar
+
+Interested in RTL Design, ASIC Physical Design, Computer Architecture and Digital VLSI.

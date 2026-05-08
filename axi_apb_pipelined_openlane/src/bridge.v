@@ -477,12 +477,47 @@ assign arready = (current_state == SETUP_M);
 
 assign PADDR = DWREQ[0] ? DADDR : 3'd0;
 
-assign PSEL1 = 1'b0;
-assign PSEL2 = 1'b0;
-assign PSEL3 = 1'b0;
-assign PSEL4 = 1'b0;
+assign PSEL1 =
+(current_state == SETUP_M ||
+ current_state == SETUP_S ||
+ current_state == ACCESS_S ||
+ current_state == WSETUP_S ||
+ current_state == WACCESS_S)
+?
+((addr >= 5'b00000 && addr <= 5'b00111) ? 1'b1 : 1'b0)
+: 1'b0;
 
-assign PWRITE = (current_state == WACCESS_S);
+assign PSEL2 =
+(current_state == SETUP_M ||
+ current_state == SETUP_S ||
+ current_state == ACCESS_S ||
+ current_state == WSETUP_S ||
+ current_state == WACCESS_S)
+?
+((addr >= 5'b01000 && addr <= 5'b01111) ? 1'b1 : 1'b0)
+: 1'b0;
+
+assign PSEL3 =
+(current_state == SETUP_M ||
+ current_state == SETUP_S ||
+ current_state == ACCESS_S ||
+ current_state == WSETUP_S ||
+ current_state == WACCESS_S)
+?
+((addr >= 5'b10000 && addr <= 5'b10111) ? 1'b1 : 1'b0)
+: 1'b0;
+
+assign PSEL4 =
+(current_state == SETUP_M ||
+ current_state == SETUP_S ||
+ current_state == ACCESS_S ||
+ current_state == WSETUP_S ||
+ current_state == WACCESS_S)
+?
+((addr >= 5'b11000 && addr <= 5'b11111) ? 1'b1 : 1'b0)
+: 1'b0;
+
+assign PWRITE = (DWREQ[1] && (PSEL1 || PSEL2 || PSEL3 || PSEL4));
 
 assign PENABLE =
 (current_state == SETUP_S ||
